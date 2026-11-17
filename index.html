@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>No-Show Call List</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <h1>No-Show Call List</h1>
+    <span class="proto">Prototype · fake data</span>
+  </div>
+  <nav class="tabs" role="tablist" aria-label="View">
+    <button role="tab" id="tab-front" data-view="front" aria-selected="true">Front desk</button>
+    <button role="tab" id="tab-manager" data-view="manager" aria-selected="false">Manager</button>
+  </nav>
+  <div class="controls">
+    <label>Demo date
+      <select id="demo-date"></select>
+    </label>
+    <label>Working as
+      <select id="working-as"></select>
+    </label>
+    <button id="reset-demo" class="btn ghost" type="button">Reset demo</button>
+  </div>
+</header>
+
+<main id="view-front" class="view" aria-labelledby="tab-front"></main>
+<main id="view-manager" class="view" aria-labelledby="tab-manager" hidden></main>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
