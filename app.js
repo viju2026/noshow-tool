@@ -102,6 +102,7 @@ function chips(a) {
   return `<div class="chips">${a.reasons.split('; ').map(r =>
     `<span class="chip${/attended last|in progress/.test(r) ? ' neg' : ''}">${esc(r)}</span>`).join('')}</div>`;
 }
+const dots = n => Array.from({ length: MAX_CALLS }, (_, i) => `<i class="dot${i < n ? ' on' : ''}"></i>`).join('');
 function statusLine(a, st) {
   const tags = [];
   const last = st.last;
@@ -116,28 +117,39 @@ function statusLine(a, st) {
       tags.push(`<span class="tag ok">${last.o}</span>`);
       if (last.o === 'Cancelled' || last.o === 'Rescheduled') tags.push('<span class="tag">Slot opened: pass to backfill</span>');
     }
-    tags.push(`<span>${st.calls.length}/${MAX_CALLS} calls · last by ${esc(last.staff)}</span>`);
-  } else tags.push(`<span>0/${MAX_CALLS} calls</span>`);
+    tags.push(`<span class="attempts">${dots(st.calls.length)} ${st.calls.length}/${MAX_CALLS} calls · last by ${esc(last.staff)}</span>`);
+  } else tags.push(`<span class="attempts">${dots(0)} 0/${MAX_CALLS} calls</span>`);
   if (st.key === 'maxed') tags.push('<span class="tag">No more calls. Text follow-up only</span>');
   const cl = state.claims[a.id];
   if (cl) tags.push(`<span>Claimed by ${esc(cl)}</span>`);
   if (state.skipped[a.id]) tags.push('<span class="tag">Skipped for now</span>');
   return `<div class="status full">${tags.join('')}</div>`;
 }
+const initials = n => n.split(' ').map(w => w[0]).join('').slice(0, 2);
 function rowHTML(a, st) {
+  const btn = (o, label, cls = '') => `<button class="btn ${cls}" data-act="log" data-o="${o}" data-id="${a.id}">${label}</button>`;
   const actions = st.done
-    ? `<button class="btn small" data-act="undo" data-id="${a.id}">Undo last call</button>`
-    : OUTCOMES.map((o, i) => `${i === 3 ? '<span class="sep"></span>' : ''}<button class="btn small${o === 'Confirmed' ? ' primary' : ''}" data-act="log" data-o="${o}" data-id="${a.id}">${o}</button>`).join('')
-      + `<span class="sep"></span><button class="btn small" data-act="claim" data-id="${a.id}">${state.claims[a.id] === state.as ? 'Release' : 'Claim'}</button>`
-      + `<button class="btn small" data-act="skip" data-id="${a.id}">${state.skipped[a.id] ? 'Unskip' : 'Skip'}</button>`;
-  return `<article class="row${state.skipped[a.id] ? ' skipped' : ''}">
-    <div class="time">${fmtTime(a.time)}</div>
-    <div><div class="name">${esc(a.name)} <span class="meta">${esc(a.pid)}</span></div>
-      <div class="meta"><a href="tel:${esc(a.phone)}">${esc(a.phone)}</a> · ${esc(a.type)} · ${esc(a.patientType)} patient</div></div>
-    <div class="score"><span class="badge ${a.tier}">${a.score}</span><div class="meta">${a.tier} risk</div></div>
-    <div class="full">${chips(a)}</div>
+    ? `<button class="btn" data-act="undo" data-id="${a.id}">Undo last call</button>`
+    : btn('Confirmed', '✓ Confirmed', 'primary') + btn('Voicemail', 'Left voicemail') + btn('No answer', 'No answer')
+      + `<details class="more"><summary class="btn">More ▾</summary><div class="menu">
+          ${['Rescheduled', 'Cancelled', 'Wrong number'].map(o => btn(o, o, 'item')).join('')}
+          <hr>
+          <button class="btn item" data-act="claim" data-id="${a.id}">${state.claims[a.id] === state.as ? 'Release' : 'Claim this patient'}</button>
+          <button class="btn item" data-act="skip" data-id="${a.id}">${state.skipped[a.id] ? 'Unskip' : 'Skip for now'}</button></div></details>`;
+  const sev = a.score >= 70 ? 'sev2' : 'sev1';
+  return `<article class="row ${sev}${state.skipped[a.id] ? ' skipped' : ''}">
+    <div class="row-main">
+      <div class="when"><b>${fmtTime(a.time).replace(/ [AP]M/, '')}</b><small>${fmtTime(a.time).slice(-2)}</small></div>
+      <div class="avatar" aria-hidden="true">${esc(initials(a.name))}</div>
+      <div class="who">
+        <div class="name">${esc(a.name)} <span class="pid">${esc(a.pid)}</span></div>
+        <div class="meta"><a class="tel" href="tel:${esc(a.phone)}">${esc(a.phone)}</a> · ${esc(a.type)} · ${esc(a.patientType)} patient</div>
+      </div>
+      <div class="scorebox"><div class="num">${a.score}</div><div class="lbl">${a.tier} risk</div></div>
+    </div>
+    ${chips(a)}
     ${statusLine(a, st)}
-    <div class="actions full">${actions}</div>
+    <div class="actions">${actions}</div>
   </article>`;
 }
 function renderFront() {
@@ -146,9 +158,10 @@ function renderFront() {
     const all = listFor(d).map(a => ({ a, st: statusOf(a) }));
     return { label, d, all, open: all.filter(x => !x.st.done), done: all.filter(x => x.st.done) };
   });
-  const cards = groups.map(g => `<div class="card"><div class="label">${g.label} · ${dayLabel(g.d)}</div>
-    <div class="value">${g.open.length} <span style="font-size:15px;font-weight:400">to call</span></div>
-    <div class="sub">${g.all.length} high-risk · ${g.done.length} done</div></div>`).join('');
+  const cards = groups.map(g => `<div class="card day-card"><div class="label">${g.label} · ${dayLabel(g.d)}</div>
+    <div class="value">${g.open.length}<small> to call</small></div>
+    <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="${g.all.length}" aria-valuenow="${g.done.length}"><span style="width:${g.all.length ? (g.done.length / g.all.length) * 100 : 0}%"></span></div>
+    <div class="sub">${g.done.length} of ${g.all.length} high-risk patients done</div></div>`).join('');
   const seg = (key, opts) => `<div class="seg" role="group">${opts.map(([v, l]) =>
     `<button data-${key}="${v}" aria-pressed="${ui[key] === v}">${l}</button>`).join('')}</div>`;
   const body = groups.map(g => {
