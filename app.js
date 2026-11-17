@@ -200,7 +200,7 @@ function patientStatus(a) {
   if (a.replied) return { key: 'replied', label: 'Confirmed by text' };
   const st = statusOf(a);
   if (st.key === 'todo') return { key: 'todo', label: a.date < state.demo ? 'Not called' : 'To call' };
-  return { key: st.key, label: `${st.label} (${st.calls.length}/${MAX_CALLS})` };
+  return { key: st.key, label: st.key === 'done' ? st.label : `${st.label} (${st.calls.length}/${MAX_CALLS})` };
 }
 function renderManager() {
   const demo = state.demo, tmr = addDays(demo, 1);
@@ -209,11 +209,13 @@ function renderManager() {
   const allCalls = appts.flatMap(a => callsOf(a).map(c => ({ ...c, a })));
   const reached = allCalls.filter(c => REACHED.includes(c.o)).length;
   const confirmed = allCalls.filter(c => c.o === 'Confirmed').length;
+  const callsRatio = onList.length ? allCalls.length / onList.length : 0;
   const cards = [
-    ['High-risk patients this week', high.length, `${onList.length} on the call list (didn't reply to the text)`],
-    ['Calls made so far', allCalls.length, `${pct(allCalls.length ? reached / allCalls.length : NaN)} reached a person`],
-    ['Confirmed on a call', confirmed, `${pct(allCalls.length ? confirmed / allCalls.length : NaN)} of calls`],
-  ].map(([l, v, s]) => `<div class="card"><div class="label">${l}</div><div class="value">${v}</div><div class="sub">${s}</div></div>`).join('');
+    ['High-risk patients this week', high.length, `${onList.length} on the call list (didn't reply to the text)`, null, 'k-high'],
+    ['Calls made so far', allCalls.length, `${pct(allCalls.length ? reached / allCalls.length : NaN)} reached a person`, Math.min(1, callsRatio), 'k-calls'],
+    ['Confirmed on a call', confirmed, `${pct(allCalls.length ? confirmed / allCalls.length : NaN)} of calls`, allCalls.length ? confirmed / allCalls.length : 0, 'k-ok'],
+  ].map(([l, v, s, p, k]) => `<div class="card kpi ${k}"><div class="label">${l}</div><div class="value">${v}</div>
+    ${p === null ? '' : `<div class="progress"><span style="width:${p * 100}%"></span></div>`}<div class="sub">${s}</div></div>`).join('');
 
   // scoring check on finished days
   const past = appts.filter(a => a.date < demo);
@@ -221,12 +223,15 @@ function renderManager() {
   const rate = (xs) => xs.length ? xs.filter(a => a.result === 'No-show').length / xs.length : NaN;
   const coverage = ns.length ? ns.filter(a => a.onCall).length / ns.length : NaN;
   const check = past.length ? `
-    <div class="panel"><h2>Does the scoring work? (finished days: ${dayLabel(dates()[0])} to ${dayLabel(addDays(demo, -1))})</h2>
-      <div class="cards" style="margin:0">
-        <div class="card"><div class="label">No-show rate</div><div class="value">${pct(rate(past))}</div><div class="sub">${ns.length} of ${past.length} appointments · starting rate 15%</div></div>
-        <div class="card"><div class="label">High-risk no-show rate</div><div class="value">${pct(rate(past.filter(a => a.tier === 'High')))}</div><div class="sub">Low risk: ${pct(rate(past.filter(a => a.tier === 'Low')))}</div></div>
-        <div class="card ${coverage >= LAUNCH_BAR ? 'good' : ''}"><div class="label">No-shows that were on the call list</div><div class="value">${pct(coverage)}</div>
-          <div class="sub">Launch bar ${pct(LAUNCH_BAR)}: <span class="${coverage >= LAUNCH_BAR ? 'pass' : 'fail'}">${coverage >= LAUNCH_BAR ? 'met' : 'not met'}</span></div></div>
+    <div class="panel"><div class="panel-head"><div><h2>Does the scoring work?</h2>
+        <p class="sub">Finished days: ${dayLabel(dates()[0])} to ${dayLabel(addDays(demo, -1))}</p></div>
+        <span class="pill ${coverage >= LAUNCH_BAR ? 'p-ok' : 'p-bad'}">${coverage >= LAUNCH_BAR ? 'Launch bar met' : 'Launch bar not met'}</span></div>
+      <div class="check">
+        <div class="metric"><div class="label">No-show rate</div><div class="value">${pct(rate(past))}</div><div class="sub">${ns.length} of ${past.length} appointments · starting rate 15%</div></div>
+        <div class="metric"><div class="label">High-risk no-show rate</div><div class="value">${pct(rate(past.filter(a => a.tier === 'High')))}</div><div class="sub">vs ${pct(rate(past.filter(a => a.tier === 'Low')))} for low risk</div></div>
+        <div class="metric wide"><div class="label">No-shows that were on the call list</div><div class="value">${pct(coverage)}</div>
+          <div class="gauge" aria-label="Coverage ${pct(coverage)}, launch bar ${pct(LAUNCH_BAR)}"><span class="fill ${coverage >= LAUNCH_BAR ? 'ok' : 'bad'}" style="width:${(coverage || 0) * 100}%"></span><i style="left:${LAUNCH_BAR * 100}%"></i></div>
+          <div class="sub">Marker shows the ${pct(LAUNCH_BAR)} launch bar</div></div>
       </div>
       <p class="note">Results are simulated. Outcomes show only for days before the demo date.</p></div>` : '';
 
@@ -249,8 +254,9 @@ function renderManager() {
     Object.entries(state.claims).forEach(([id, who]) => { if (who === s) touched.add(id); });
     const claimedUncalled = [...touched].filter(id => { const a = appts.find(x => x.id === id); return a && a.date <= tmr && !callsOf(a).length; }).length;
     const r = cs.filter(c => REACHED.includes(c.o)).length;
-    return `<tr><td>${s}</td><td class="num">${touched.size}</td><td class="num">${cs.length}</td>
-      <td class="num">${pct(cs.length ? r / cs.length : NaN)}</td><td class="num">${cs.filter(c => c.o === 'Confirmed').length}</td>
+    const rr = cs.length ? r / cs.length : 0;
+    return `<tr><td><span class="who-cell"><span class="avatar sm" aria-hidden="true">${s.slice(-1)}</span>${s}</span></td><td class="num">${touched.size}</td><td class="num">${cs.length}</td>
+      <td class="num"><span class="minibar"><span style="width:${rr * 100}%"></span></span> ${pct(cs.length ? rr : NaN)}</td><td class="num">${cs.filter(c => c.o === 'Confirmed').length}</td>
       <td class="num">${cs.filter(c => ['Voicemail', 'No answer'].includes(c.o)).length}</td><td class="num">${claimedUncalled}</td></tr>`;
   }).join('');
   const neverCalled = onList.filter(a => a.date <= tmr && !callsOf(a).length && !state.claims[a.id]);
@@ -270,21 +276,21 @@ function renderManager() {
     const ps = patientStatus(a), shown = a.date < demo && a.result;
     return `<tr><td>${dayLabel(a.date)}<br><span class="meta">${fmtTime(a.time)}</span></td><td>${esc(a.name)}<br><span class="meta">${esc(a.pid)} · ${esc(a.patientType)}</span></td>
       <td>${esc(a.type)}</td><td><span class="badge High">${a.score}</span></td><td>${chips(a)}</td>
-      <td>${esc(ps.label)}${shown ? `<br><span class="meta">Result: ${esc(a.result)}</span>` : ''}</td></tr>`;
+      <td><span class="pill ${{ replied: 'p-ok', done: 'p-ok', todo: 'p-warn', pending: 'p-warn', maxed: 'p-bad' }[ps.key] || ''}">${esc(ps.label)}</span>${shown ? `<br><span class="pill ${{ 'No-show': 'p-bad', Attended: 'p-ok', Cancelled: 'p-mute' }[a.result]}" style="margin-top:4px">${esc(a.result)}</span>` : ''}</td></tr>`;
   }).join('');
 
   $('#view-manager').innerHTML = `
     <div class="cards">${cards}</div>
     ${check}
     <div class="grid2" style="margin-bottom:16px">
-      <div class="panel"><h2>High-risk patients by day</h2>${byDay}
+      <div class="panel"><div class="panel-head"><div><h2>High-risk patients by day</h2><p class="sub">How many were called</p></div></div>${byDay}
         <div class="legend"><span><i style="background:var(--accent)"></i>Called</span><span><i style="background:var(--high);opacity:.75"></i>Not called / replied</span></div></div>
-      <div class="panel"><h2>Top risk reasons</h2>${reasonBars}<p class="note">Across all high-risk patients this week.</p></div>
+      <div class="panel"><div class="panel-head"><div><h2>Top risk reasons</h2><p class="sub">Across all high-risk patients this week</p></div></div>${reasonBars}</div>
     </div>
-    <div class="panel"><h2>Front desk performance</h2>
+    <div class="panel"><div class="panel-head"><div><h2>Front desk performance</h2><p class="sub">Workload and outcomes per person</p></div></div>
       <div class="table-wrap"><table><thead><tr><th>Staff</th><th class="num">Patients handled</th><th class="num">Calls</th><th class="num">Reached</th><th class="num">Confirmed</th><th class="num">Voicemail / no answer</th><th class="num">Claimed, not yet called</th></tr></thead><tbody>${staffRows}</tbody></table></div>
       <p class="note">${neverCalled.length} high-risk patients on the list have no calls and no owner (${pastNever} from days already finished). These are workload and outcome numbers, not a ranking: whether a patient confirms depends a lot on the patient.</p></div>
-    <div class="panel"><h2>High-risk patients and reasons (${rows.length})</h2>
+    <div class="panel"><div class="panel-head"><div><h2>High-risk patients and reasons</h2><p class="sub">${rows.length} patients shown</p></div></div>
       <div class="filters">
         <input type="search" id="m-q" placeholder="Search name or ID" value="${esc(f.q)}" aria-label="Search">
         <select id="m-day" aria-label="Day"><option value="all">All days</option>${opt(days, f.day, dayLabel)}</select>

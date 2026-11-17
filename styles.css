@@ -164,11 +164,61 @@ td.num, th.num { text-align: right; }
 .pass { color: var(--ok); font-weight: 600; }
 .fail { color: var(--high); font-weight: 600; }
 
+.badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-weight: 700; font-size: 13px; }
+.badge.High { background: var(--high-bg); color: var(--high); }
+.badge.Medium { background: var(--med-bg); color: var(--med); }
+.badge.Low { background: var(--low-bg); color: var(--low); }
+/* manager polish */
+.panel { border-radius: 12px; padding: 16px 18px; box-shadow: 0 1px 2px rgba(16, 24, 40, .05); }
+.panel-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
+.panel-head h2 { margin: 0; font-size: 17px; letter-spacing: -.01em; }
+.panel .sub, .check .sub { color: var(--muted); font-size: 13px; margin: 2px 0 0; }
+.kpi { position: relative; padding-top: 16px; box-shadow: 0 1px 2px rgba(16, 24, 40, .05); border-radius: 12px; }
+.kpi::before { content: ""; position: absolute; left: 14px; right: 14px; top: 0; height: 3px; border-radius: 0 0 3px 3px; background: var(--accent); }
+.kpi.k-high::before { background: var(--high); }
+.kpi.k-ok::before { background: var(--ok); }
+.kpi.k-calls .progress span { background: var(--accent); }
+.kpi.k-ok .progress span { background: var(--ok); }
+.pill { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12.5px; font-weight: 600; background: var(--chip-bg); color: var(--muted); white-space: nowrap; }
+.pill.p-ok { background: var(--ok-bg); color: var(--ok); }
+.pill.p-bad { background: var(--high-bg); color: var(--high); }
+.pill.p-warn { background: var(--warn-bg); color: var(--med); }
+.pill.p-mute { background: var(--chip-bg); color: var(--muted); }
+.check { display: grid; grid-template-columns: 1fr 1fr 1.6fr; gap: 12px; }
+.metric { padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: color-mix(in srgb, var(--chip-bg) 45%, var(--surface)); }
+.metric .label { font-size: 13px; color: var(--muted); }
+.metric .value { font-size: 28px; font-weight: 700; letter-spacing: -.02em; line-height: 1.2; }
+.gauge { position: relative; height: 10px; background: var(--chip-bg); border-radius: 999px; margin: 8px 0 6px; overflow: visible; }
+.gauge .fill { display: block; height: 100%; border-radius: 999px; }
+.gauge .fill.ok { background: var(--ok); }
+.gauge .fill.bad { background: var(--high); }
+.gauge i { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--text); border-radius: 2px; }
+.bar { grid-template-columns: 140px 1fr 34px; }
+.bar .track { height: 16px; border-radius: 8px; }
+.bar .fill:first-child { border-radius: 8px 0 0 8px; }
+.bar .num { font-weight: 600; color: var(--text); }
+.who-cell { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; }
+.avatar.sm { width: 28px; height: 28px; font-size: 12px; border-radius: 50%; display: grid; place-items: center; background: color-mix(in srgb, var(--accent) 14%, var(--surface)); color: var(--accent); }
+.minibar { display: inline-block; vertical-align: middle; width: 54px; height: 6px; background: var(--chip-bg); border-radius: 999px; overflow: hidden; margin-right: 6px; }
+.minibar span { display: block; height: 100%; background: var(--ok); }
+table { border-collapse: separate; border-spacing: 0; }
+thead th { position: sticky; top: 0; background: var(--surface); text-transform: uppercase; letter-spacing: .04em; font-size: 11.5px; border-bottom: 2px solid var(--line); }
+tbody tr:hover td { background: color-mix(in srgb, var(--accent) 5%, var(--surface)); }
+.filters input[type="search"] { min-width: 200px; }
+.table-wrap { max-height: 560px; overflow: auto; border: 1px solid var(--line); border-radius: 10px; }
+.panel .table-wrap table { border: 0; min-width: 700px; }
+.panel .table-wrap td:first-child { white-space: nowrap; }
+.panel .table-wrap td, .panel .table-wrap th { padding: 8px 8px; }
+td .chip { white-space: nowrap; }
+td .chips { max-width: 300px; }
+.panel .table-wrap + .note { margin-top: 10px; }
+
 @media (max-width: 640px) {
   .row-main { grid-template-columns: 50px 1fr auto; }
   .avatar { display: none; }
   details.more { margin-left: 0; }
   .topbar { position: static; }
   .bar { grid-template-columns: 100px 1fr 30px; }
+  .check { grid-template-columns: 1fr; }
   .controls { margin-left: 0; }
 }
